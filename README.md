@@ -1,4 +1,4 @@
-# sab sib seb sob sub
+# sub - CLI Tool for Subtitle Management
 
 CLI tool written in Rust for subtitle management: list, extract, and inject subtitles from MKV files, as well as search and download subtitles from [SubSource.net](https://subsource.net).
 
@@ -229,8 +229,3 @@ All dependencies are managed by Cargo (`Cargo.toml`):
 ## License
 
 MIT
-
-# Credits
-- zamkara
-- mbunkus
-- Subsource
