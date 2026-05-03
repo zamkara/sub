@@ -11,6 +11,7 @@ use crate::mkv::{lang_name, lang_to_api};
 const API_BASE: &str = "https://api.subsource.net/api/v1";
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct ApiResponse<T> {
     data: Option<Vec<T>>,
 }
@@ -132,10 +133,7 @@ pub async fn search(
         }
 
         let total = selected_ids.len();
-        println!(
-            "{}",
-            format!("Downloading {} subtitle(s)...", total).cyan()
-        );
+        println!("{}", format!("Downloading {} subtitle(s)...", total).cyan());
 
         for (i, &idx) in selected_ids.iter().enumerate() {
             let sub = &sorted_subs[idx];
@@ -158,12 +156,7 @@ pub async fn search(
     }
 }
 
-pub async fn download_by_id(
-    cfg: &ConfigManager,
-    _movie_id: u64,
-    sub_id: u64,
-    output_dir: &str,
-) {
+pub async fn download_by_id(cfg: &ConfigManager, _movie_id: u64, sub_id: u64, output_dir: &str) {
     let api_key = match cfg.api_key() {
         Some(k) => k,
         None => {
@@ -276,19 +269,10 @@ async fn get_subtitles(
     }
 }
 
-async fn download_and_extract(
-    client: &Client,
-    api_key: &str,
-    sub_id: u64,
-    output_dir: &str,
-) {
+async fn download_and_extract(client: &Client, api_key: &str, sub_id: u64, output_dir: &str) {
     let url = format!("{}/subtitles/{}/download", API_BASE, sub_id);
 
-    let resp = client
-        .get(&url)
-        .header("X-API-Key", api_key)
-        .send()
-        .await;
+    let resp = client.get(&url).header("X-API-Key", api_key).send().await;
 
     match resp {
         Ok(r) => {
@@ -340,11 +324,7 @@ fn extract_srt(data: &[u8], output_dir: &str) -> Option<String> {
         }
 
         if !srt_names.is_empty() {
-            let chosen = if srt_names.len() == 1 {
-                srt_names.remove(0)
-            } else {
-                srt_names.remove(0)
-            };
+            let chosen = srt_names.remove(0);
 
             let mut file = archive.by_name(&chosen).ok()?;
             let dest_path = Path::new(output_dir).join(&chosen);
@@ -365,7 +345,7 @@ fn extract_srt(data: &[u8], output_dir: &str) -> Option<String> {
     None
 }
 
-fn sort_by_priority(subs: &mut Vec<Subtitle>, default_lang: &str) {
+fn sort_by_priority(subs: &mut [Subtitle], default_lang: &str) {
     let api_dl = lang_to_api(default_lang).to_lowercase();
     subs.sort_by(|a, b| {
         let pa = priority(&a.language, &api_dl);
@@ -388,7 +368,10 @@ fn priority(lang: &str, default_lang: &str) -> u8 {
 fn display_movies(movies: &[Movie]) {
     println!("{}", "Search results:".cyan());
     for (i, m) in movies.iter().enumerate() {
-        let year = m.release_year.map(|y| y.to_string()).unwrap_or("?".to_string());
+        let year = m
+            .release_year
+            .map(|y| y.to_string())
+            .unwrap_or("?".to_string());
         println!(
             "  {} {} ({}) - {}",
             format!("[{}]", i + 1).green(),
@@ -402,11 +385,7 @@ fn display_movies(movies: &[Movie]) {
 
 fn display_subtitles(subs: &[Subtitle], default_lang: &str) {
     let api_dl = lang_to_api(default_lang);
-    println!(
-        "{} {}",
-        "Available subtitles:".cyan(),
-        format!("({} total)", subs.len())
-    );
+    println!("{} ({})", "Available subtitles:".cyan(), subs.len());
     println!(
         "{}",
         format!("{:<4} {:<12} {:<14}", "#", "Language", "Release").cyan()
@@ -430,14 +409,7 @@ fn display_subtitles(subs: &[Subtitle], default_lang: &str) {
             "".to_string()
         };
         let rel = s.release_info.first().cloned().unwrap_or_default();
-        println!(
-            "{}{:<4} {:<12} {:<14}{}",
-            marker,
-            i + 1,
-            fname,
-            rel,
-            hi_tag
-        );
+        println!("{}{:<4} {:<12} {:<14}{}", marker, i + 1, fname, rel, hi_tag);
     }
     println!();
 }
@@ -450,7 +422,11 @@ fn pick_number(max: usize, prompt: &str, default: usize) -> Option<usize> {
     if input.trim().to_lowercase() == "s" {
         return None;
     }
-    input.trim().parse::<usize>().ok().filter(|&n| n >= 1 && n <= max)
+    input
+        .trim()
+        .parse::<usize>()
+        .ok()
+        .filter(|&n| n >= 1 && n <= max)
 }
 
 fn pick_input(prompt: &str) -> String {

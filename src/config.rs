@@ -1,7 +1,7 @@
+use colored::Colorize;
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
-use colored::Colorize;
 
 pub struct ConfigManager {
     pub config_path: PathBuf,
@@ -63,7 +63,12 @@ impl ConfigManager {
         let mut lines: Vec<String> = if self.config_path.exists() {
             fs::read_to_string(&self.config_path)
                 .ok()
-                .map(|c| c.lines().filter(|l| !l.starts_with("api_key=")).map(String::from).collect())
+                .map(|c| {
+                    c.lines()
+                        .filter(|l| !l.starts_with("api_key="))
+                        .map(String::from)
+                        .collect()
+                })
                 .unwrap_or_default()
         } else {
             Vec::new()
@@ -113,10 +118,7 @@ impl ConfigManager {
                 std::process::exit(1);
             }
         }
-        println!(
-            "{}",
-            format!("Config '{}' set to '{}'", key, value).green()
-        );
+        println!("{}", format!("Config '{}' set to '{}'", key, value).green());
     }
 
     fn set_key(&self, key: &str, value: &str) {

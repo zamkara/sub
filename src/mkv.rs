@@ -18,20 +18,23 @@ pub fn list_subtitles(video: &str, default_lang: &str) {
     );
     println!(
         "{}",
-        format!("{:<8} {:<14} {:<16} {}", "Track", "Type", "Language", "Name").cyan()
+        format!(
+            "{:<8} {:<14} {:<16} {}",
+            "Track", "Type", "Language", "Name"
+        )
+        .cyan()
     );
     println!(
         "{}",
-        format!("{:<8} {:<14} {:<16} {}", "-----", "----", "--------", "----").cyan()
+        format!(
+            "{:<8} {:<14} {:<16} {}",
+            "-----", "----", "--------", "----"
+        )
+        .cyan()
     );
 
     let output = Command::new("mkvmerge")
-        .args([
-            "--identification-format",
-            "json",
-            "--identify",
-            video,
-        ])
+        .args(["--identification-format", "json", "--identify", video])
         .output()
         .expect("Failed to run mkvmerge");
 
@@ -177,22 +180,13 @@ pub fn inject_subtitle(video: &str, subtitle: &str, lang: Option<&str>, name: Op
     fs::rename(&tmp_path, video).expect("Failed to replace video");
     println!(
         "{}",
-        format!(
-            "Done: Subtitle injected. Backup saved as {}",
-            backup
-        )
-        .green()
+        format!("Done: Subtitle injected. Backup saved as {}", backup).green()
     );
 }
 
 fn get_track_language(video: &str, track_id: usize) -> String {
     let output = Command::new("mkvmerge")
-        .args([
-            "--identification-format",
-            "json",
-            "--identify",
-            video,
-        ])
+        .args(["--identification-format", "json", "--identify", video])
         .output()
         .ok()
         .map(|o| o.stdout)
@@ -216,7 +210,10 @@ fn get_track_language(video: &str, track_id: usize) -> String {
 }
 
 fn basename(path: &str) -> &str {
-    Path::new(path).file_name().and_then(|n| n.to_str()).unwrap_or(path)
+    Path::new(path)
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or(path)
 }
 
 pub fn lang_name(lang: &str) -> String {

@@ -127,7 +127,16 @@ async fn main() {
         } => {
             let language = lang.unwrap_or_else(|| cfg.default_lang.clone());
             let out_dir = output_dir.unwrap_or_else(|| cfg.default_dir.clone());
-            subsource::search(&cfg, &query, &language, year, &out_dir, non_interactive, verbose).await;
+            subsource::search(
+                &cfg,
+                &query,
+                &language,
+                year,
+                &out_dir,
+                non_interactive,
+                verbose,
+            )
+            .await;
         }
         Commands::Download {
             movie_id,
@@ -182,7 +191,10 @@ fn cmd_key_setup() {
         std::process::exit(1);
     }
     cfg.save_api_key(key);
-    println!("{}", format!("API key saved to {}", cfg.config_path.display()).green());
+    println!(
+        "{}",
+        format!("API key saved to {}", cfg.config_path.display()).green()
+    );
 }
 
 fn cmd_key_add(key: Option<String>) {
