@@ -1,0 +1,176 @@
+name: 🎬 Subtitle Tool Pipeline
+
+on:
+  push:
+    branches: ["main", "master"]
+    tags: ["v*"]
+  pull_request:
+    branches: ["main", "master"]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  quality-check:
+    name: 🔍 Quality Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 🦀 Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: 📦 Cache dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: 🎨 Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: 📎 Lint with clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: 🧪 Run tests
+        run: cargo test --verbose
+
+  build-linux:
+    name: 🐧 Build Linux
+    needs: quality-check
+    if: success() && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 🦀 Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 📦 Cache dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: 🎬 Install mkvtoolnix
+        run: sudo apt-get update && sudo apt-get install -y mkvtoolnix
+
+      - name: 🔨 Build release
+        run: cargo build --release
+
+      - name: 📏 Strip binary
+        run: strip target/release/sub || true
+
+      - name: 📤 Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sub-linux-x86_64
+          path: target/release/sub
+
+  build-macos:
+    name: 🍎 Build macOS
+    needs: quality-check
+    if: success() && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        target: [x86_64-apple-darwin, aarch64-apple-darwin]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 🦀 Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: 📦 Cache dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: 🎬 Install mkvtoolnix
+        run: brew install mkvtoolnix
+
+      - name: 🔨 Build release
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: 📤 Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sub-macos-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/sub
+
+  build-windows:
+    name: 🪟 Build Windows
+    needs: quality-check
+    if: success() && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 🦀 Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 📦 Cache dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: 🔨 Build release
+        run: cargo build --release
+
+      - name: 📤 Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sub-windows-x86_64
+          path: target/release/sub.exe
+
+  release:
+    name: 🚀 Create Release
+    needs: [build-linux, build-macos, build-windows]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 📥 Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: 📦 Prepare release assets
+        run: |
+          mkdir -p release
+          for dir in artifacts/*/; do
+            platform=$(basename "$dir")
+            if [ -f "$dir/sub" ]; then
+              cp "$dir/sub" "release/$platform"
+              chmod +x "release/$platform"
+            elif [ -f "$dir/sub.exe" ]; then
+              cp "$dir/sub.exe" "release/$platform.exe"
+            fi
+          done
+          ls -la release/
+
+      - name: 🎉 Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/*
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          body: |
+            ## 🎬 Subtitle Tool Release
+
+            CLI tool for subtitle management - download, extract, and inject subtitles.
+
+            ### 📦 Installation
+            ```bash
+            # Linux/macOS
+            chmod +x sub-*
+            ./sub-* --help
+
+            # Or move to PATH
+            sudo mv sub-linux-x86_64 /usr/local/bin/sub
+            ```
+
+            ### ✨ What's Changed
+            See release notes below ⬇️
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
